@@ -1,0 +1,11 @@
+# ignore special files
+*.spp
+
+# ignore IDE specific files
+.idea
+
+release.jenkinsfile
+validation.jenkinsfile
+gitHubPublish.jenkinsfile
+gitHubPull.jenkinsfile
+
