@@ -1,0 +1,115 @@
+@startuml
+skinparam Shadowing false
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+skinparam sequence {
+    ArrowColor DodgerBlue
+    ActorBorderColor DodgerBlue
+    LifeLineBorderColor Blue
+
+    ParticipantBackgroundColor #3483eb
+    ParticipantBorderColor #3483eb
+    ParticipantFontSize 14
+    ParticipantFontColor White
+
+    ActorBackgroundColor #3483eb
+    ActorFontSize 14
+    NoteBackgroundColor #3483eb
+}
+
+hide footbox
+' autonumber
+
+box #ffffff
+participant "eGK" as egk
+participant "Nutzendes System" as app
+end box
+
+box #ffffff
+participant "eHealth-CardLink" as ehcl
+participant "Konnektor" as kon
+participant "PS" as avs
+end box
+
+group subscription events
+avs -> kon : PS subscription Event "CARD/INSERTED"
+end
+
+' User initiates Session - connect to CardLink and send eGK data
+group App
+app -> app : generateCardSessionId()
+end
+
+egk <- app : cmdAPDU (ReadBinary EF.ATR)
+egk -> app : rpsAPDU (EF.ATR content)
+egk <- app : cmdAPDU (ReadBinary EF.Version2)
+egk -> app : rspAPDU (EF.Version2 content)
+egk <- app : cmdAPDU (ReadBinary EF.GDO)
+egk -> app : rspAPDU (EF.GDO content)
+egk <- app : cmdAPDU (ReadBinary EF.C.eGK.AUT_CVC.E256)
+egk -> app : rspAPDU (EF.C.eGK.AUT_CVC.E256 content)
+egk <- app : cmdAPDU (ReadBinary EF.C.CA_eGK.CS.E256)
+egk -> app : rspAPDU (EF.C.CA_eGK.CS.E256 content)
+egk <- app : cmdAPDU (SELECT DF.ESIGN)
+egk -> app : rspAPDU (SELECT OK)
+egk <- app : cmdAPDU (ReadBinary EF.C.CH.AUT.E256)
+egk -> app : rspAPDU (EF.C.CH.AUT.E256 content)
+egk <- app : cmdAPDU (ReadBinary EF.C.CH.AUT.R2048)
+egk -> app : rspAPDU (EF.C.CH.AUT.R2048 content)
+
+group App
+app -> app : Build registerEgkMessage\n(CardSessionID\nEF.ATR\nEF.Version2\nEF.GDO\nEF.C.CA_eGK.CS.E256\nEF.EF.C.eGK.AUT_CVC.E256\nEF.C.CH.AUT.E256\nEF.C.CH.AUT.R2048)
+end
+
+group App Hanshake with App-Backend or eHCL
+app <-> ehcl : Handshake(webSocketId)
+end
+
+app -> ehcl : send(registerEgkMessage)
+
+ehcl -> kon : SICCT „Slot-Ereignis – Karte gesteckt“
+kon -> avs: abonniertes Kartensteckereignis (Trigger ReadVSD)
+
+avs -> kon : GetCards(cardType=eGK)
+' Konnektor fragt erforderliche Kartendaten fuer GenCards ab
+group SICCT Commands for GetCards
+kon -> ehcl: SICCT-cmdAPDU: collecting Data for GetCards()
+ehcl -> kon: SICCT rspAPDU: collected data for GetCards()
+end
+
+kon -> avs : response to GetCards():cardHandles\nEGK (\n\tcardHandles\n\tICCSN \n\tCT_IT \n\tSlotID \n\tCardHolderName\n\tKVNR)
+avs -> kon : ReadVSD\n(cardHandle\nPerformOnlineCheck=true\nReadOnlineReceipt=true)
+
+' Konnektor fragt erforderliche Kartendaten ab
+group All SICCT Commands for ReadVSD before INTERNAL AUTHENTICATE
+kon -> ehcl: SICCT-cmdAPDU to read single eGK data object from registereGKEnvelope
+ehcl -> kon: SICCT rspAPDU (eGK data from registerEgkMessage)
+end
+
+
+kon -> ehcl: cmdAPDU INTERNAL_AUTHENTICATE
+
+ehcl -> app : receive(sendApduEnvelope, correlationId)
+app -> egk : MANAGE SECURITY ENVIRONMENT
+egk  -> app : '90 00'
+app -> egk : INTERNAL AUTHENTICATE
+egk -> app : 'signature || 90 00'
+app -> ehcl : send(sendApduResponseEnvelope, correlationId)
+ehcl -> kon : response of INTERNAL AUTHENTICAE ('signature || 90 00')
+
+group Check VSD Update
+kon-> kon  : check VSD Update by the VSDM service)
+kon -> kon : build Prüfungsnachweis (PN-KON)
+end
+
+kon -> avs : Prüfungsnachweis
+
+group Check  Prüfungsnachweis  by PS
+avs-> avs: compare \nKVNR from PN-KON \nwith KVNR from GetCards()
+avs -> avs : use Prüfungsnachweis
+end
+
+' avs -> ehcl: :progressInfoEnvelope
+' ehcl -> app: socket.emit("send", progressInfoEnvelope)
+@enduml
