@@ -275,6 +275,8 @@ components:
         - cvcAuth
         - cvcCA
         - atr
+        - pd
+        - vd
       description: Base64 encoded json payload
       properties:
         cardSessionId:
@@ -307,6 +309,14 @@ components:
           type: string
           format: byte
           description: Data from EF.ATR
+        pd:
+          type: string
+          format: byte
+          description: Data from EF.PD, required for HCV calculation
+        vd:
+          type: string
+          format: byte
+          description: Data from EF.VD, required for HCV calculation
       contentType: application/json
     sendApduPayload:
       type: object

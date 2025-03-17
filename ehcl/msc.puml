@@ -57,12 +57,18 @@ egk <- app : cmdAPDU (ReadBinary EF.C.CH.AUT.E256)
 egk -> app : rspAPDU (EF.C.CH.AUT.E256 content)
 egk <- app : cmdAPDU (ReadBinary EF.C.CH.AUT.R2048)
 egk -> app : rspAPDU (EF.C.CH.AUT.R2048 content)
+egk <- app : cmdAPDU (SELECT DF.HCA)
+egk -> app : rspAPDU (SELECT OK)
+egk <- app : cmdAPDU (ReadBinary EF.PD)
+egk -> app : rspAPDU (EF.PD content)
+egk <- app : cmdAPDU (ReadBinary EF.VD)
+egk -> app : rspAPDU (EF.VD content)
 
 group App
-app -> app : Build registerEgkMessage\n(CardSessionID\nEF.ATR\nEF.Version2\nEF.GDO\nEF.C.CA_eGK.CS.E256\nEF.EF.C.eGK.AUT_CVC.E256\nEF.C.CH.AUT.E256\nEF.C.CH.AUT.R2048)
+app -> app : Build registerEgkMessage\n(CardSessionID\nEF.ATR\nEF.Version2\nEF.GDO\nEF.C.CA_eGK.CS.E256\nEF.EF.C.eGK.AUT_CVC.E256\nEF.C.CH.AUT.E256\nEF.C.CH.AUT.R2048\nEF.PD\nEF.VD)
 end
 
-group App Hanshake with App-Backend or eHCL
+group App Handshake with App-Backend or eHCL
 app <-> ehcl : Handshake(webSocketId)
 end
 
