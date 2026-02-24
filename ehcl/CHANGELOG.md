@@ -15,6 +15,10 @@ following sections (if non-empty):
 
 Currently, the versioning policy of this project follows [Semantic Versioning v2.0.0][].
 
+## v1.0.1
+Include the EF.PD and EF.VD file contents into the registerEGK message such that the primary system can properly 
+calculate the HCV after readVSD for subsequent eRezept-Fachdienst calls.  
+
 ## v1.0.0
 First release publicly available.
 
