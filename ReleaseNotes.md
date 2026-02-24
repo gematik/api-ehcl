@@ -2,6 +2,9 @@
 
 # Release Notes api-ehcl
 
+## Release 1.0.1
+- Change README to be compliant with OSPO guidelines
+
 ## Release 1.0.0
 - Description of the interface between component "eHealth-CardLink" on one
   hand and an application which connects to an electronic Health insurance Card
